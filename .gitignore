@@ -1,0 +1,42 @@
+# Environnement virtuel & Python
+.venv/
+venv/
+env/
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Variables d'environnement & Secrets
+.env
+.env.*
+*.env
+
+# Données locales & Persistance RAG (ChromaDB, Uploads, Fichiers temporaires)
+data/chroma/*
+data/temp/*
+data/uploads/*
+*.sqlite3
+*.db
+chunks/*
+content/*
+
+# Cache Jupyter Notebook & exports temporaires
+.ipynb_checkpoints/
+image_summaries_partial.json
+*.ipynb
+
+
+# IDEs & Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers système OS
+.DS_Store
+Thumbs.db
