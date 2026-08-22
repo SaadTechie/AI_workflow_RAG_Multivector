@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION: str = "multi_modal_rag_v4"
     EMBEDDING_MODEL: str = "models/gemini-embedding-001"
 
+
     # --- Batching / anti quota (utilisé par image_summary.py) ---
     VISION_BATCH_SIZE: int = 2
     VISION_CONCURRENCY: int = 1
@@ -50,6 +51,11 @@ class Settings(BaseSettings):
     RETRIEVAL_K_IMAGE: int = 8
     RETRIEVAL_MARGIN: float = 0.12
     RETRIEVAL_MAX_KEEP: int = 6
+
+    # Dans src/config.py
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
 
     # Nouvelle syntaxe Pydantic v2
     model_config = SettingsConfigDict(

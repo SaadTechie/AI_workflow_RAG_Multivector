@@ -1,12 +1,14 @@
 import os
 import shutil
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+
+from .deps import get_current_admin_user
 from ..services.ingestion_service import ingestion_service
 
 router = APIRouter(tags=["Ingestion"])
 
 
-@router.post("/upload")
+@router.post("/upload",dependencies=[Depends(get_current_admin_user)])
 async def upload_document(file: UploadFile = File(...)):
     """Reçoit un fichier (PDF ou PPTX), le sauvegarde temporairement et lance l'ingestion."""
     allowed_extensions = [".pdf", ".pptx"]

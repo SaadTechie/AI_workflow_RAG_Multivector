@@ -12,6 +12,17 @@ SUPPORTED_MIME_TYPES = {
     "image/webp", "image/heic", "image/heif"
 }
 
+from tenacity import retry, wait_exponential, stop_after_attempt
+
+@retry(wait=wait_exponential(multiplier=1, min=3, max=30), stop=stop_after_attempt(5), reraise=True)
+def _search_with_retry(vectorstore, query: str, k: int, doc_type: str):
+    return vectorstore.similarity_search_with_score(query, k=k, filter={"type": doc_type})
+
+@retry(wait=wait_exponential(multiplier=2, min=3, max=30), stop=stop_after_attempt(5), reraise=True)
+def _embed_query_with_retry(vectorstore, question: str):
+    return vectorstore._embedding_function.embed_query(question)
+
+
 def _filter_by_relative_gap(
     results: List[Tuple[Document, float]],
     margin: float = settings.RETRIEVAL_MARGIN,
@@ -97,6 +108,10 @@ def retrieve_by_type(
     Récupère les documents pertinents en filtrant par type.
     Utilise les paramètres k fournis, sinon bascule sur config.settings.
     """
+    # S'assurer que la question est bien une chaîne nettoyée
+    clean_query = str(question).strip()
+    if not clean_query:
+        return {"images": [], "texts": []}
     # 🟢 Priorité aux paramètres de la requête, repli sur le paramétrage global
     final_k_text = k_text if k_text is not None else settings.RETRIEVAL_K_TEXT
     final_k_table = k_table if k_table is not None else settings.RETRIEVAL_K_TABLE
@@ -105,29 +120,35 @@ def retrieve_by_type(
     vectorstore = get_vectorstore()
     docstore = get_postgres_docstore()
 
-    # 1. Recherche filtrée par type dans Chroma
-    text_results = vectorstore.similarity_search_with_score(
-        question, k=final_k_text, filter={"type": "text"}
-    )
-    filtered_texts = _filter_by_relative_gap(text_results)
+    # 🟢 Un seul appel d'embedding pour toute la requête
+    query_embedding = _embed_query_with_retry(vectorstore, clean_query)
 
-    table_results = vectorstore.similarity_search_with_score(
-        question, k=final_k_table, filter={"type": "table"}
-    )
-    filtered_tables = _filter_by_relative_gap(table_results)
+    filtered_texts = []
+    if final_k_text > 0:
+        text_results = vectorstore.similarity_search_by_vector_with_relevance_scores(
+            query_embedding, k=final_k_text, filter={"type": "text"}
+        )
+        filtered_texts = _filter_by_relative_gap(text_results)
 
-    image_results = vectorstore.similarity_search_with_score(
-        question, k=final_k_image, filter={"type": "image"}
-    )
-    filtered_images = _filter_by_relative_gap(image_results)
+    filtered_tables = []
+    if final_k_table > 0:
+        table_results = vectorstore.similarity_search_by_vector_with_relevance_scores(
+            query_embedding, k=final_k_table, filter={"type": "table"}
+        )
+        filtered_tables = _filter_by_relative_gap(table_results)
+
+    filtered_images = []
+    if final_k_image > 0:
+        image_results = vectorstore.similarity_search_by_vector_with_relevance_scores(
+            query_embedding, k=final_k_image, filter={"type": "image"}
+        )
+        filtered_images = _filter_by_relative_gap(image_results)
 
     all_summaries = filtered_texts + filtered_tables + filtered_images
     if not all_summaries:
         return {"images": [], "texts": []}
 
-    # 2. Récupération des documents parents via doc_id
     doc_ids = [d.metadata["doc_id"] for d in all_summaries]
     metadatas = [d.metadata for d in all_summaries]
     raw_docs = docstore.mget(doc_ids)
-
     return parse_docs(raw_docs, metadatas)

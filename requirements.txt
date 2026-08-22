@@ -25,3 +25,8 @@ lxml==6.1.1
 groq==0.37.1
 python-pptx==1.0.2
 PyMuPDF==1.28.2
+#ajouté récémment 
+passlib[bcrypt]==1.7.4
+PyJWT==2.13.0
+python-multipart==0.0.32
+alembic==1.19.1
