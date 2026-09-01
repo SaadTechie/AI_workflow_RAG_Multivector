@@ -61,5 +61,3 @@ package-lock.json.log
 # ==========================================
 *.log
 logs/
-
-streamlit/*
