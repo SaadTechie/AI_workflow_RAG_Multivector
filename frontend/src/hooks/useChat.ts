@@ -1,3 +1,4 @@
+//code mort à supprimer -- plus utilisé depuis qu'App.tsx gère tout en interne)
 import { useEffect, useState } from 'react';
 import { sendChatMessage } from '../api/chat.api';
 import type { Message, ChatRequest } from '../types/api.types';

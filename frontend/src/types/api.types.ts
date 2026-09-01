@@ -31,4 +31,5 @@ export interface Message {
   content: string;
   sources?: SourceDocument[];
   isError?: boolean;
+  isPending?: boolean;
 }

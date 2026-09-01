@@ -5,6 +5,10 @@ from langchain_core.embeddings import Embeddings
 
 from ..config import settings
 
+#pour embedding local
+#from langchain_ollama import OllamaEmbeddings
+#!! Retirez complètement GeminiEmbeddingsDirect et le client google.genai.
+
 _client = genai.Client(api_key=settings.GOOGLE_API_KEY)
 
 
@@ -31,6 +35,10 @@ class GeminiEmbeddingsDirect(Embeddings):
 def get_vectorstore() -> Chroma:
     """Retourne l'instance du VectorStore ChromaDB persistant."""
     embeddings = GeminiEmbeddingsDirect()
+    #embeddings = OllamaEmbeddings(
+     #   model=settings.EMBEDDING_MODEL,
+      #  base_url=settings.OLLAMA_BASE_URL,
+    #)
     return Chroma(
         collection_name=settings.CHROMA_COLLECTION,
         embedding_function=embeddings,

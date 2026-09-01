@@ -9,7 +9,7 @@ router = APIRouter(tags=["Ingestion"])
 
 
 @router.post("/upload",dependencies=[Depends(get_current_admin_user)])
-async def upload_document(file: UploadFile = File(...)):
+def upload_document(file: UploadFile = File(...)):
     """Reçoit un fichier (PDF ou PPTX), le sauvegarde temporairement et lance l'ingestion."""
     allowed_extensions = [".pdf", ".pptx"]
     file_ext = os.path.splitext(file.filename)[1].lower()

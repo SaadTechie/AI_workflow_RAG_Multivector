@@ -41,7 +41,7 @@ def create_admin_user(email: str, password: str, full_name: str):
 
 if __name__ == "__main__":
     create_admin_user(
-        email="admin@segula.fr",
-        password="AdminSecretPassword123!",
+        email="admin@segulagrp.com",
+        password="metre password admin ici",
         full_name="Administrateur SEGULA"
     )

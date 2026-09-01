@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # --- Chroma (vectorstore) ---
     CHROMA_PERSIST_DIR: str
     CHROMA_COLLECTION: str = "multi_modal_rag_v4"
-    EMBEDDING_MODEL: str = "models/gemini-embedding-001"
+    EMBEDDING_MODEL: str = "models/gemini-embedding-001" # dimension: 3072
 
 
     # --- Batching / anti quota (utilisé par image_summary.py) ---
@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
+
+    #pour rendre solution 100% local et retirez GOOGLE_API_KEY, GROQ_API_KEY, LANGCHAIN_API_KEY de la classe — plus requis
+    #OLLAMA_BASE_URL: str = "http://localhost:11434"
+    #LLM_MODEL: str = "mistral:8b"
+    #VISION_MODEL: str = "llama3.2-vision:11b"
+    #EMBEDDING_MODEL: str = "bge-m3"
+
+    
 
     # Nouvelle syntaxe Pydantic v2
     model_config = SettingsConfigDict(

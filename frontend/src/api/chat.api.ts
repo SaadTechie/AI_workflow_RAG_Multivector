@@ -43,6 +43,7 @@ export const createConversation = async (): Promise<Conversation> => {
   return response.json();
 };
 
+
 // 5. Envoi du message
 export const sendChatMessage = async (payload: ChatRequest): Promise<ChatResponse> => {
   const response = await fetchWithAuth('/api/query', {

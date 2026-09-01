@@ -11,6 +11,16 @@ from ..rag.retriever import retrieve_by_type
 # Client unique natif Google pour éviter les conflits gRPC avec LangChain
 genai_client = genai.Client(api_key=settings.GOOGLE_API_KEY)
 
+#llm de géneration local
+
+#from langchain_ollama import ChatOllama
+
+# llm = ChatOllama(
+   # model=settings.LLM_MODEL,
+   # base_url=settings.OLLAMA_BASE_URL,
+   # temperature=0.0,
+#)
+
 
 def reformulate_question(question: str, chat_history: str) -> str:
     """Reformule la question via le SDK natif google.genai."""
@@ -25,6 +35,7 @@ def reformulate_question(question: str, chat_history: str) -> str:
     Nouvelle question: {question}"""
 
     try:
+        #response = llm.invoke(prompt)
         response = genai_client.models.generate_content(
             model="gemini-3.5-flash-lite",
             contents=prompt

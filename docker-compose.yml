@@ -38,7 +38,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_backend
+    restart: always
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432        # 🟢 ajouté — port interne réel du conteneur postgres
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_PUBLIC_ENDPOINT=localhost:9000
+      # Si déploiement sur un vrai serveur, remplacer localhost par le domaine/IP public de MinIO.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./data/chroma:/app/data/chroma
+      - ./data/uploads:/app/data/uploads
 
+  # Frontend React/TypeScript (Vite) — build statique servi par Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rag_frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

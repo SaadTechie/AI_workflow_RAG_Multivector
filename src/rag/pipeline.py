@@ -3,7 +3,7 @@
 from ..rag.chain import chain_with_sources
 from ..schemas.responses import QueryResponse, RetrievedSource
 from sqlalchemy.orm import Session
-from..models.models import User
+from ..models.models import User
 import traceback
 
 

@@ -1,19 +1,18 @@
+import os
+import logging
 from langchain_core.runnables import RunnableLambda
-from langchain_groq import ChatGroq
-from langchain_google_genai import ChatGoogleGenerativeAI
-
+#pour adpté la solution local
+#from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from ..config import settings
-import litellm
-litellm.suppress_debug_info = True
-# ou pour couper carrément les logs d'erreur intermédiaires :
-import logging
-logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
 
-import os
+
 os.environ.setdefault("GEMINI_API_KEY", settings.GOOGLE_API_KEY)
+
+# voir les commentaire pour la solution local
+# Tout le code _summarize_with_fallback, _to_litellm_messages, GEMINI_API_KEY disparaît — plus la peine.
 
 # ----------- TEXT / TABLE -----------
 
@@ -33,12 +32,21 @@ Table or text chunk:
 {element}
 """
 
+#text_prompt = ChatPromptTemplate.from_template(TEXT_PROMPT)
+
 text_prompt = ChatPromptTemplate.from_template(TEXT_PROMPT)
 
 def _to_litellm_messages(prompt_value) -> list[dict]:
     return [{"role": "user", "content": m.content} for m in prompt_value.to_messages()]
 
 def _summarize_with_fallback(prompt_value) -> str:
+    # 🟢 IMPORT ET CONFIGURATION DE LITELLM DÉPLACÉS ICI (Lazy Import)
+    os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] = "True"
+    
+    import litellm
+    litellm.telemetry = False
+    litellm.suppress_debug_info = True
+    logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
     response = litellm.completion(
         model="groq/openai/gpt-oss-20b",
         messages=_to_litellm_messages(prompt_value),
@@ -47,6 +55,10 @@ def _summarize_with_fallback(prompt_value) -> str:
         num_retries=1,
     )
     return response.choices[0].message.content
+
+
+# text_model = ChatOllama(model=settings.LLM_MODEL,base_url=settings.OLLAMA_BASE_URL,temperature=0.0,)
+# summarize_chain = text_prompt | text_model | StrOutputParser()
 
 summarize_chain = (
     text_prompt
@@ -102,9 +114,6 @@ image_prompt = ChatPromptTemplate.from_messages(
                 {
                     "type": "image_url",
                     "image_url": {
-                        # ⬇️ dynamique au lieu de "data:image/jpeg;base64,{image}" codé en dur.
-                        # Vos ImageRecord (PDF -> image/png, PPTX -> réel) portent le bon mime type,
-                        # on ne veut pas mentir à Gemini sur le format envoyé.
                         "url": "data:{mime_type};base64,{image}"
                     },
                 },
@@ -112,6 +121,9 @@ image_prompt = ChatPromptTemplate.from_messages(
         )
     ]
 )
+
+# L'importation et la création du client Google se font uniquement à l'appel de la fonction
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 image_chain = (
     image_prompt
@@ -122,3 +134,6 @@ image_chain = (
     )
     | StrOutputParser()
 )
+
+# vision_model = ChatOllama( model=settings.VISION_MODEL,base_url=settings.OLLAMA_BASE_URL,temperature=0.0,)
+# image_chain = image_prompt | vision_model | StrOutputParser()
