@@ -1,12 +1,23 @@
+
+
 from ..rag.chain import chain_with_sources
 from ..schemas.responses import QueryResponse, RetrievedSource
+from sqlalchemy.orm import Session
+from ..models.models import User
+import traceback
 
 
 class RAGPipeline:
-    def run(self, question: str, k_text: int = None, k_table: int = None, k_image: int = None) -> QueryResponse:
+    def run(
+            self,
+            question: str,
+            chat_history: str,
+            k_text: int = None, k_table: int = None, k_image: int = None
+        ) -> QueryResponse:
         try:
             result = chain_with_sources.invoke({
                 "question": question,
+                "chat_history": chat_history,
                 "k_text": k_text,
                 "k_table": k_table,
                 "k_image": k_image,
@@ -22,6 +33,7 @@ class RAGPipeline:
                     doc_id=meta.get("doc_id", "unknown"),
                     type=meta.get("type", "text"),
                     source=meta.get("source", "unknown"),
+                    location=meta.get("location") or (f"Page {meta['page']}" if "page" in meta else None), # 🟢 Ajout
                     content_preview=doc.page_content[:200] if hasattr(doc, "page_content") else str(doc)[:200]
                 ))
 
@@ -31,13 +43,14 @@ class RAGPipeline:
                     doc_id=meta.get("doc_id", "unknown"),
                     type="image",
                     source=meta.get("source", "unknown"),
+                    location=meta.get("location") or (f"Page {meta['page']}" if "page" in meta else None), # 🟢 Ajout
                     image_url=img.get("url")
                 ))
-
             return QueryResponse(question=question, answer=answer_text, sources=sources)
 
         except Exception as e:
             print(f"Erreur dans la pipeline RAG : {e}")
+            print(traceback.format_exc())   # 🟢 temporaire, pour diagnostic
             return QueryResponse(
                 question=question,
                 answer="Je n'ai pas pu traiter votre demande. Veuillez reformuler ou réessayer plus tard.",

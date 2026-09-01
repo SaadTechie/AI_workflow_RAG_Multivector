@@ -13,7 +13,6 @@ htmlcov/
 
 # Variables d'environnement & Secrets
 .env
-.env.*
 *.env
 
 # Données locales & Persistance RAG (ChromaDB, Uploads, Fichiers temporaires)
@@ -24,6 +23,7 @@ data/uploads/*
 *.db
 chunks/*
 content/*
+extracted_images/*
 
 # Cache Jupyter Notebook & exports temporaires
 .ipynb_checkpoints/
@@ -40,3 +40,24 @@ image_summaries_partial.json
 # Fichiers système OS
 .DS_Store
 Thumbs.db
+
+# Fichiers sensibles et sauvegardes BDD
+backup.sql
+*.sql
+
+# ==========================================
+# 1. Dépendances & Builds (Node / Frontend)
+# ==========================================
+**/node_modules/
+dist/
+frontend/dist/
+build/
+.vite/
+.eslintcache
+package-lock.json.log
+
+# ==========================================
+# 8. Logs
+# ==========================================
+*.log
+logs/
