@@ -104,7 +104,7 @@ def _collect_image_fragments(chunks, min_width=60, min_height=60, min_area=6000)
             height = y1 - y0
             area = width * height
 
-            # 🟢 Filtre anti-puces / petites icônes : on ignore les fragments
+            # Filtre anti-puces / petites icônes : on ignore les fragments
             # trop petits pour être un schéma réel
             if width < min_width or height < min_height or area < min_area:
                 continue

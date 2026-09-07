@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         )
 
     # --- MinIO (fichiers + images) ---
-    MINIO_ENDPOINT: str
+    MINIO_ENDPOINT: str 
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
     MINIO_BUCKET: str = "rag-documents"
@@ -34,16 +34,18 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "models/gemini-embedding-001" # dimension: 3072
 
 
-    # --- Batching / anti quota (utilisé par image_summary.py) ---
-    VISION_BATCH_SIZE: int = 2
-    VISION_CONCURRENCY: int = 1
-    VISION_BATCH_PAUSE_S: int = 30
+    # config.py — valeurs révisées, toujours prudentes mais moins conservatrices
+    VISION_BATCH_SIZE: int = 3
+    VISION_CONCURRENCY: int = 2    # 2 images en parallèle au lieu de 1
+    VISION_BATCH_PAUSE_S: int = 10 # au lieu de 30 — votre quota Gemini vision (15 RPM) le permet largement
+
+    TEXT_BATCH_SIZE: int = 3
+    TEXT_CONCURRENCY: int = 2
+    TEXT_BATCH_PAUSE_S: int = 8    # au lieu de 15
+    
+
     EMBEDDING_BATCH_SIZE: int = 5
     EMBEDDING_BATCH_PAUSE_S: int = 15
-
-    TEXT_BATCH_SIZE: int = 2            # Réduit à 2 textes/tableaux (évite l'explosion du TPM Groq à 8000)
-    TEXT_CONCURRENCY: int = 1           # Traitement 1 par 1 pour le LLM texte
-    TEXT_BATCH_PAUSE_S: int = 15
 
     # --- Retrieval (pour rag/retriever.py, plus tard) ---
     RETRIEVAL_K_TEXT: int = 8

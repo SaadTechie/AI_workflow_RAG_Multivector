@@ -85,7 +85,7 @@ def build_prompt(inputs: Dict[str, Any]) -> List[HumanMessage]:
                 "type": "image_url",
                 "image_url": {"url": f"data:{content_type};base64,{img['data']}"}
             })
-
+    # modifier si tu passe en  llm local 
     return [HumanMessage(content=prompt_content)]
 
 

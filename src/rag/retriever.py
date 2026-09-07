@@ -53,7 +53,7 @@ def parse_docs(raw_docs: List[Any], summary_metadatas: List[Dict[str, Any]]) -> 
         if not raw_content:
             continue
 
-        # 🟢 CORRECTION : Décodage systématique des bytes PostgreSQL
+        # CORRECTION : Décodage systématique des bytes PostgreSQL
         if isinstance(raw_content, bytes):
             raw_content = raw_content.decode("utf-8")
 
@@ -65,7 +65,7 @@ def parse_docs(raw_docs: List[Any], summary_metadatas: List[Dict[str, Any]]) -> 
                 parts = raw_content.split("|")
                 minio_key = parts[0].replace("MINIO_KEY:", "")
 
-                # 🟢 Détection automatique via la bibliothèque standard Python
+                # Détection automatique via la bibliothèque standard Python
                 mime_type, _ = mimetypes.guess_type(minio_key)
                 mime_type = mime_type or "image/png"  # Repli si inconnu
 
@@ -76,10 +76,11 @@ def parse_docs(raw_docs: List[Any], summary_metadatas: List[Dict[str, Any]]) -> 
                 # Téléchargement des octets bruts pour conversion Base64 Gemini
                 try:
                     img_data = minio_client.client.get_object(settings.MINIO_BUCKET, minio_key).read()
+                    presigned_url = minio_client.get_presigned_url(minio_key)
                 except Exception:
                     continue  # on ignore cette image, on garde le reste du contexte
                 b64_str = base64.b64encode(img_data).decode("utf-8")
-                presigned_url = minio_client.get_presigned_url(minio_key)
+                
 
 
                 images.append({
@@ -112,7 +113,7 @@ def retrieve_by_type(
     clean_query = str(question).strip()
     if not clean_query:
         return {"images": [], "texts": []}
-    # 🟢 Priorité aux paramètres de la requête, repli sur le paramétrage global
+    # Priorité aux paramètres de la requête, repli sur le paramétrage global
     final_k_text = k_text if k_text is not None else settings.RETRIEVAL_K_TEXT
     final_k_table = k_table if k_table is not None else settings.RETRIEVAL_K_TABLE
     final_k_image = k_image if k_image is not None else settings.RETRIEVAL_K_IMAGE
@@ -120,7 +121,7 @@ def retrieve_by_type(
     vectorstore = get_vectorstore()
     docstore = get_postgres_docstore()
 
-    # 🟢 Un seul appel d'embedding pour toute la requête
+    # Un seul appel d'embedding pour toute la requête
     query_embedding = _embed_query_with_retry(vectorstore, clean_query)
 
     filtered_texts = []

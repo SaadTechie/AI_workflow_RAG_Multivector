@@ -25,7 +25,7 @@ def query_rag(
             db=db
         )
     except HTTPException:
-        raise  # 🟢 on laisse les erreurs HTTP volontaires (404, etc.) remonter telles quelles
+        raise  # on laisse les erreurs HTTP volontaires (404, etc.) remonter telles quelles
     except Exception as e:
         raise HTTPException(
             status_code=500,

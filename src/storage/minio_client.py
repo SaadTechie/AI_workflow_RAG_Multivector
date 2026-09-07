@@ -10,27 +10,34 @@ from ..config import settings
 
 class MinIOClient:
     def __init__(self):
-        # Nettoyage de l'endpoint (retire http:// ou https://)
+        # 1. Nettoyage des endpoints (retire http:// ou https://)
         endpoint = settings.MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
+        public_endpoint = settings.MINIO_PUBLIC_ENDPOINT.replace("http://", "").replace("https://", "")
         
-        # 🟢 Conversion explicite de la chaîne ".env" en booléen Python
+        # 2. Conversion explicite du booléen de sécurité
         if isinstance(settings.MINIO_SECURE, str):
             is_secure = settings.MINIO_SECURE.lower() in ("true", "1", "yes")
         else:
             is_secure = bool(settings.MINIO_SECURE)
 
+        # Client INTERNE : Utilisé pour TOUTES les opérations du backend (upload, download, check bucket)
         self.client = Minio(
             endpoint=endpoint,
             access_key=settings.MINIO_ACCESS_KEY,
             secret_key=settings.MINIO_SECRET_KEY,
-            secure=is_secure  # Doit valoir False en local
+            secure=is_secure,  # False en local
+            region="us-east-1",  # Région par défaut pour MinIO (évite l'appel GetBucketLocation caché)
         )
+
+        # Client PUBLIC : Utilisé EXCLUSIVEMENT pour la génération d'URLs pré-signées
         self._public_client = Minio(
-            endpoint=settings.MINIO_PUBLIC_ENDPOINT,
+            endpoint=public_endpoint,
             access_key=settings.MINIO_ACCESS_KEY,
             secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_SECURE,
+            secure=is_secure,
+            region="us-east-1",  # Région par défaut pour MinIO (évite l'appel GetBucketLocation caché)
         )
+
         self.bucket_name = settings.MINIO_BUCKET
         self._ensure_bucket_exists()
 
