@@ -37,7 +37,7 @@ def delete_users_by_email(emails: list[str]):
 
 if __name__ == "__main__":
     emails_a_supprimer = [
-        #mettre emails à supprimer ici.
+        "mohammed@segulagrp.com"
     ]
     
     print("🗑️ Suppression des utilisateurs...")

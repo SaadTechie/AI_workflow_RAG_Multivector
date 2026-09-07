@@ -10,6 +10,7 @@ from ..summarization import summarize_extraction
 from ..storage.minio_client import minio_client
 from ..storage.chroma_store import get_vectorstore
 from ..storage.postgres_docstore import get_postgres_docstore
+from ..config import settings
 
 
 class IngestionService:
@@ -17,6 +18,20 @@ class IngestionService:
         self.vectorstore = get_vectorstore()
         self.docstore = get_postgres_docstore()
         self.id_key = "doc_id"
+
+    def _check_minio_available(self) -> None:
+        """Vérifie que MinIO est joignable AVANT tout traitement coûteux.
+        Échoue vite et clairement plutôt que de laisser l'ingestion planter
+        après extraction + résumé (temps perdu, quota API gaspillé pour rien)."""
+        try:
+            minio_client.client.bucket_exists(minio_client.bucket_name)
+        except Exception as e:
+            raise RuntimeError(
+                f"MinIO injoignable (endpoint configuré : {settings.MINIO_ENDPOINT}). "
+                f"Vérifiez que le conteneur MinIO tourne et que MINIO_ENDPOINT correspond bien "
+                f"au contexte d'exécution (nom de service Docker interne, pas 'localhost', "
+                f"si le backend tourne lui-même en conteneur). Détail : {e}"
+            ) from e
 
     def ingest_file(self, file_path: str) -> Dict[str, Any]:
         """
@@ -30,20 +45,26 @@ class IngestionService:
         file_ext = os.path.splitext(file_path)[1].lower()
         file_name = os.path.basename(file_path)
 
-        # 🟢 Garde anti-duplication : on vérifie si ce nom de fichier a déjà été ingéré
+        # Garde anti-duplication : on vérifie si ce nom de fichier a déjà été ingéré
         existing = self.vectorstore.get(where={"source": file_name}, limit=1)
         if existing and existing.get("ids"):
             return {
                 "status": "skipped",
                 "filename": file_name,
-                "reason": "Déjà indexé — utilisez un nom de fichier différent ou supprimez d'abord les entrées existantes."
+                "reason": "Déjà indexé — utilisez fichier différent ou supprimez d'abord les entrées existantes."
             }
+
+
+        self._check_minio_available()
 
         # 1. Sauvegarde du fichier original dans MinIO
         with open(file_path, "rb") as f:
             file_bytes = f.read()
         raw_file_minio_key = f"raw_documents/{uuid.uuid4()}_{file_name}"
-        minio_client.upload_bytes(file_bytes, raw_file_minio_key)
+        try:
+            minio_client.upload_bytes(file_bytes, raw_file_minio_key)
+        except Exception as e:
+            raise RuntimeError(f"Échec de l'upload du fichier original vers MinIO : {e}") from e
 
         # 2. Extraction selon le type de fichier
         if file_ext == ".pptx":

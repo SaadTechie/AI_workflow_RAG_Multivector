@@ -50,7 +50,7 @@ class RAGPipeline:
 
         except Exception as e:
             print(f"Erreur dans la pipeline RAG : {e}")
-            print(traceback.format_exc())   # 🟢 temporaire, pour diagnostic
+            print(traceback.format_exc())   # temporaire, pour diagnostic
             return QueryResponse(
                 question=question,
                 answer="Je n'ai pas pu traiter votre demande. Veuillez reformuler ou réessayer plus tard.",

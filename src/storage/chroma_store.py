@@ -2,6 +2,7 @@
 from google import genai
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
+from concurrent.futures import ThreadPoolExecutor
 
 from ..config import settings
 
@@ -17,13 +18,14 @@ class GeminiEmbeddingsDirect(Embeddings):
     en appelant directement le SDK google-genai."""
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [
-            _client.models.embed_content(
+        def _embed_one(t):
+            return _client.models.embed_content(
                 model=settings.EMBEDDING_MODEL.replace("models/", ""),
                 contents=t,
             ).embeddings[0].values
-            for t in texts
-        ]
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            return list(executor.map(_embed_one, texts))
 
     def embed_query(self, text: str) -> list[float]:
         return _client.models.embed_content(

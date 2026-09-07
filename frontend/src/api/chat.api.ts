@@ -52,9 +52,9 @@ export const sendChatMessage = async (payload: ChatRequest): Promise<ChatRespons
     body: JSON.stringify({
       conversation_id: payload.conversation_id,
       question: payload.question,
-      k_text: payload.k_text ?? 3,
+      k_text: payload.k_text ?? 5,
       k_table: payload.k_table ?? 2,
-      k_image: payload.k_image ?? 2,
+      k_image: payload.k_image ?? 3,
     }),
   });
 
