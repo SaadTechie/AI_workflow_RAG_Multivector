@@ -8,6 +8,7 @@ interface SidebarProps {
   onRenameConversation: (id: string, newTitle: string) => void;
   onNewChat: () => void;
   disableNewChat?: boolean;
+  docsCount?: number | null; // Nouveau prop pour le compteur de documents
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -17,6 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onRenameConversation,
   onNewChat,
   disableNewChat = false,
+  docsCount,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -128,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 mx-2 mb-2 rounded-xl bg-white border border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
         <span className="font-medium">Base documentaire</span>
         <span className="bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full text-[10px]">
-          192 docs
+          {docsCount !== null ? `${docsCount} docs` : "…"}
         </span>
       </div>
     </aside>

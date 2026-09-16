@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { uploadDocument } from '../../api/admin.api';
+import { startUpload, getUploadStatus, fetchDocuments, deleteDocument } from '../../api/admin.api';
 import { UploadDropzone } from '../../components/admin/UploadDropzone';
 import { Header } from '../../components/layout/Header';
+import { DocumentsTable } from '../../components/admin/DocumentsTable';
 import { useAuthContext } from '../../context/AuthContext';
-import type { UploadResult } from '../../types/admin.types';
+import type { UploadResult, AdminDocument } from '../../types/admin.types';
 
 export const AdminUploadPage: React.FC = () => {
   const { user, logout } = useAuthContext();
@@ -12,21 +13,84 @@ export const AdminUploadPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<AdminDocument[]>([]);
+
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadDocuments = async () => {
+    try {
+      const docs = await fetchDocuments();
+      setDocuments(docs);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Chargement initial de la liste
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  // Nettoyage automatique si le composant est démonté pendant un polling en cours
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || isUploading) return;
+
+    stopPolling();
     setIsUploading(true);
     setError(null);
     setResult(null);
 
     try {
-      const res = await uploadDocument(selectedFile);
-      setResult(res);
-      setSelectedFile(null);
+      const { job_id } = await startUpload(selectedFile);
+
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const status = await getUploadStatus(job_id);
+
+          if (status.status === "done") {
+            stopPolling();
+            setResult(status.result!);
+            setIsUploading(false);
+            setSelectedFile(null);
+            loadDocuments();   // 🟢 rafraîchit la liste après une ingestion réussie
+          } else if (status.status === "error") {
+            stopPolling();
+            setError(status.error || "Erreur lors de l'ingestion.");
+            setIsUploading(false);
+          }
+        } catch (pollErr: any) {
+          stopPolling();
+          setError(pollErr.message);
+          setIsUploading(false);
+        }
+      }, 3000);
     } catch (err: any) {
       setError(err.message || "Une erreur est survenue pendant l'ingestion.");
-    } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDelete = async (filename: string) => {
+    try {
+      await deleteDocument(filename);
+      await loadDocuments();   // 🟢 rafraîchit la liste après suppression
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -41,7 +105,7 @@ export const AdminUploadPage: React.FC = () => {
               Ingestion de documents
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Ajoutez un support technique (PDF ou PowerPoint) à la base documentaire.
+              Ajoutez ou retirez un support technique (PDF ou PowerPoint) de la base documentaire.
             </p>
           </div>
 
@@ -74,13 +138,15 @@ export const AdminUploadPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setSelectedFile(null)}
-                  disabled={isUploading}
-                  className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors disabled:opacity-50"
-                >
-                  Annuler
-                </button>
+                {/* Le bouton Annuler disparaît pendant l'ingestion, au lieu d'être juste grisé */}
+                {!isUploading && (
+                  <button
+                    onClick={() => setSelectedFile(null)}
+                    className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                )}
                 <button
                   onClick={handleUpload}
                   disabled={isUploading}
@@ -144,6 +210,14 @@ export const AdminUploadPage: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* 🟢 Liste des documents indexés, avec suppression */}
+        <div className="mt-10">
+          <h2 className="text-sm font-bold text-slate-700 mb-3">
+            Documents indexés ({documents.length})
+          </h2>
+          <DocumentsTable documents={documents} onDelete={handleDelete} />
         </div>
       </main>
     </div>

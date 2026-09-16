@@ -12,6 +12,7 @@ import {
   updateConversationTitle,
   fetchConversationMessages,
   sendChatMessage,
+  fetchDocumentsCount,
 } from '../api/chat.api';
 import type { Message } from '../types/api.types';
 
@@ -21,6 +22,7 @@ export const ChatPage: React.FC = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [docsCount, setDocsCount] = useState<number | null>(null);
 
   // Initialisation : charge la liste et sélectionne la première discussion
   useEffect(() => {
@@ -36,6 +38,10 @@ export const ChatPage: React.FC = () => {
       }
     };
     initChat();
+
+    fetchDocumentsCount()
+      .then(setDocsCount)
+      .catch((err) => console.error(err));
   }, []);
 
   // Uniquement rafraîchir la liste latérale sans toucher au chat actif
@@ -143,6 +149,7 @@ export const ChatPage: React.FC = () => {
           onRenameConversation={handleRename}
           onNewChat={handleNewChat}
           disableNewChat={currentSessionId === null && messages.length === 0}
+          docsCount={docsCount}
         />
 
         <main className="flex-1 flex flex-col justify-between overflow-hidden relative bg-white">
