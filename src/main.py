@@ -12,7 +12,7 @@ os.environ["LITELLM_LOCAL_POLICY_TEMPLATES"] = "True"
 os.environ["LITELLM_TELEMETRY"] = "False"
 os.environ["DISABLE_LITELLM_TELEMETRY"] = "True"
 
-from .api import health, upload, query, auth, conversations, admin
+from .api import health, upload, query, auth, conversations, admin, stats
 
 app = FastAPI(
     title="API RAG Multimodal Automobile",
@@ -36,7 +36,7 @@ app.include_router(query.router)
 app.include_router(auth.router)
 app.include_router(conversations.router)
 app.include_router(admin.router)
-
+app.include_router(stats.router)
 
 
 if __name__ == "__main__":

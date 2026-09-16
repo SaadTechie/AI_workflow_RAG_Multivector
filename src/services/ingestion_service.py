@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Dict, Any
+from typing import Dict, Any, List
 from langchain_core.documents import Document
 
 from ..extraction.base import ExtractionResult
@@ -54,7 +54,6 @@ class IngestionService:
                 "reason": "Déjà indexé — utilisez fichier différent ou supprimez d'abord les entrées existantes."
             }
 
-
         self._check_minio_available()
 
         # 1. Sauvegarde du fichier original dans MinIO
@@ -74,7 +73,7 @@ class IngestionService:
             extractor = PDFExtractor()
             extraction_res: ExtractionResult = extractor.extract(file_path)
         else:
-            #ajout prochainement: support pour d'autres formats (Word, Excel, etc.)
+            # ajout prochainement: support pour d'autres formats (Word, Excel, etc.)
             raise ValueError(f"Format de fichier non supporté : {file_ext}")
 
         # 3. Génération des résumés synchronisés
@@ -110,25 +109,20 @@ class IngestionService:
                 "raw_file_key": raw_file_minio_key
             }
             all_vector_docs.append(Document(page_content=summary, metadata=meta))
-            # Récupération de la version HTML ou texte brut du tableau
             table_content = raw_table.page_content if hasattr(raw_table, "page_content") else str(raw_table)
             all_docstore_pairs.append((doc_id, table_content.encode("utf-8")))
 
         # 6. Ingestion des IMAGES (Upload Base64 -> MinIO)
-        # 6. Ingestion des IMAGES (Upload Base64 -> MinIO)
         for img_record, summary in zip(extraction_res.images, image_summaries):
             doc_id = str(uuid.uuid4())
-            
-            # Récupération dynamique des attributs de ImageRecord
+
             ext = getattr(img_record, "ext", "png")
             content_type = getattr(img_record, "content_type", f"image/{ext}")
             b64_data = img_record.data if hasattr(img_record, "data") else img_record
             page_num = getattr(img_record, "source_location", None)
 
-            # Construction de la clé MinIO avec l'extension réelle (.jpg, .png, etc.)
             img_minio_key = f"extracted_images/{doc_id}.{ext}"
 
-            # Téléversement avec le bon Content-Type
             minio_client.upload_base64_image(
                 b64_string=b64_data,
                 object_name=img_minio_key,
@@ -167,6 +161,73 @@ class IngestionService:
                 "total_indexed": len(all_vector_docs)
             }
         }
+
+    def list_documents(self) -> List[Dict[str, Any]]:
+        """
+        Liste les documents distincts déjà indexés, avec leur répartition
+        par type (texte/tableau/image).
+
+        Un document source produit potentiellement des centaines de chunks
+        vectorisés dans Chroma — on les regroupe ici par `source` (nom du
+        fichier original) pour donner une vue exploitable côté admin,
+        plutôt que de renvoyer chaque chunk brut.
+        """
+        all_entries = self.vectorstore.get(include=["metadatas"])
+        metadatas = all_entries.get("metadatas", [])
+
+        if not metadatas:
+            return []
+
+        documents: Dict[str, Dict[str, Any]] = {}
+
+        for meta in metadatas:
+            source = meta.get("source")
+            if not source:
+                continue  # entrée orpheline sans métadonnée source, on l'ignore
+
+            if source not in documents:
+                documents[source] = {
+                    "filename": source,
+                    "raw_file_key": meta.get("raw_file_key"),
+                    "counts": {"text": 0, "table": 0, "image": 0},
+                    "total_chunks": 0,
+                }
+
+            doc_type = meta.get("type", "unknown")
+            documents[source]["counts"][doc_type] = (
+                documents[source]["counts"].get(doc_type, 0) + 1
+            )
+            documents[source]["total_chunks"] += 1
+
+        return sorted(documents.values(), key=lambda d: d["filename"])
+
+    def delete_document(self, file_name: str) -> Dict[str, Any]:
+        """Supprime un document déjà ingéré (Chroma, Postgres, MinIO), sans impacter les autres."""
+        existing = self.vectorstore.get(where={"source": file_name})
+        ids = existing.get("ids", [])
+        metadatas = existing.get("metadatas", [])
+
+        if not ids:
+            return {"status": "not_found", "filename": file_name}
+
+        doc_ids = [m["doc_id"] for m in metadatas]
+
+        # 1. Nettoyage MinIO — fichier brut + images extraites de CE document
+        minio_keys = {m["raw_file_key"] for m in metadatas if m.get("raw_file_key")}
+        minio_keys |= {m["minio_key"] for m in metadatas if m.get("minio_key")}
+        for key in minio_keys:
+            try:
+                minio_client.client.remove_object(settings.MINIO_BUCKET, key)
+            except Exception:
+                pass
+
+        # 2. Suppression du contenu brut (Postgres)
+        self.docstore.mdelete(doc_ids)
+
+        # 3. Suppression des résumés vectorisés (Chroma)
+        self.vectorstore.delete(ids=ids)
+
+        return {"status": "deleted", "filename": file_name, "chunks_removed": len(ids)}
 
 
 ingestion_service = IngestionService()

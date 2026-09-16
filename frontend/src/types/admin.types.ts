@@ -18,3 +18,25 @@ export interface UploadResult {
     total_indexed: number;
   };
 }
+
+export interface UploadJobStarted {
+  job_id: string;
+  status: "processing";
+}
+
+export interface UploadJobStatus {
+  status: "processing" | "done" | "error";
+  result?: UploadResult;
+  error?: string;
+}
+
+export interface AdminDocument {
+  filename: string;
+  raw_file_key: string | null;
+  counts: {
+    text: number;
+    table: number;
+    image: number;
+  };
+  total_chunks: number;
+}

@@ -64,3 +64,10 @@ export const sendChatMessage = async (payload: ChatRequest): Promise<ChatRespons
 
   return response.json();
 };
+
+export const fetchDocumentsCount = async (): Promise<number> => {
+  const response = await fetchWithAuth('/api/documents/count');
+  if (!response.ok) throw new Error('Erreur lors du chargement du compteur de documents');
+  const data = await response.json();
+  return data.count;
+};
